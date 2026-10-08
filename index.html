@@ -2,33 +2,57 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Cosmic Rescue - Juego 2D</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Rescue: Dash & Save</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-container">
-        <!-- Marcador superior -->
-        <div id="hud">
-            <div>Puntos: <span id="score">0</span></div>
-            <div>Escudo: <span id="shield-status">Inactivo</span></div>
+        <!-- Pantalla de Inicio (Requerida antes de Jugar) -->
+        <div id="start-screen" class="overlay">
+            <h1>🚀 COSMIC RESCUE</h1>
+            <p>Ingresa tu nombre y selecciona la dificultad para iniciar:</p>
+            
+            <input type="text" id="player-name-input" placeholder="Escribe tu nombre..." maxlength="12">
+            
+            <div class="difficulty-selector">
+                <label><input type="radio" name="difficulty" value="easy"> Fácil</label>
+                <label><input type="radio" name="difficulty" value="normal" checked> Normal</label>
+                <label><input type="radio" name="difficulty" value="hard"> Difícil</label>
+            </div>
+
+            <!-- Botón Obligatorio para Empezar -->
+            <button id="start-btn">🚀 ¡JUGAR AHORA!</button>
+
+            <!-- Tabla de Puntajes -->
+            <div class="leaderboard-container">
+                <h3>🏆 Mejores Puntajes</h3>
+                <ol id="leaderboard-list"></ol>
+            </div>
         </div>
 
-        <!-- Pantalla del juego -->
+        <!-- HUD: Puntuación, Nombre y Escudo -->
+        <div id="hud">
+            <div class="hud-item">Puntos: <span id="score">0</span></div>
+            <div class="hud-item">Piloto: <span id="current-player-name">---</span></div>
+            <div class="hud-item">Escudo: <span id="shield-status">Inactivo</span></div>
+        </div>
+
+        <!-- Lienzo del Juego -->
         <canvas id="gameCanvas"></canvas>
 
-        <!-- Controles para Celular -->
+        <!-- Botones para Celular / Táctil -->
         <div id="mobile-controls">
             <button id="btn-left">◀ Izq</button>
-            <button id="btn-action">🛡️ Escudo</button>
+            <button id="btn-action">🛡️ Escudo (10pts)</button>
             <button id="btn-right">Der ▶</button>
         </div>
 
-        <!-- Pantalla de Game Over -->
-        <div id="game-over-screen" class="hidden">
-            <h1>¡Game Over!</h1>
-            <p>Puntaje final: <span id="final-score">0</span></p>
-            <button id="restart-btn">Jugar de nuevo</button>
+        <!-- Pantalla Game Over -->
+        <div id="game-over-screen" class="overlay hidden">
+            <h2>💥 ¡Nave Destruida!</h2>
+            <p>Puntuación Final: <span id="final-score">0</span></p>
+            <button id="restart-btn">🔄 Volver al Menú</button>
         </div>
     </div>
 

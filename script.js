@@ -1,13 +1,28 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+const startScreen = document.getElementById('start-screen');
+const gameOverScreen = document.getElementById('game-over-screen');
+const startBtn = document.getElementById('start-btn');
+const restartBtn = document.getElementById('restart-btn');
+const playerNameInput = document.getElementById('player-name-input');
+const currentPlayerNameEl = document.getElementById('current-player-name');
+const leaderboardList = document.getElementById('leaderboard-list');
+
 const scoreEl = document.getElementById('score');
 const shieldEl = document.getElementById('shield-status');
-const gameOverScreen = document.getElementById('game-over-screen');
 const finalScoreEl = document.getElementById('final-score');
-const restartBtn = document.getElementById('restart-btn');
 
-// Ajustar tamaño del Canvas a la pantalla
+// Variables
+let score = 0;
+let isGameOver = true;
+let obstacles = [];
+let stars = [];
+let frameCount = 0;
+let playerName = "Piloto";
+let difficultySpeed = 3;
+let spawnRate = 40;
+
 function resizeCanvas() {
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
@@ -15,13 +30,6 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-// Variables de Estado
-let score = 0;
-let isGameOver = false;
-let obstacles = [];
-let frameCount = 0;
-
-// Configuración del Jugador
 const player = {
     x: canvas.width / 2 - 20,
     y: canvas.height - 70,
@@ -32,12 +40,12 @@ const player = {
     hasShield: false
 };
 
-// Controles por Teclado
+// Controles Teclado
 const keys = {};
 window.addEventListener('keydown', (e) => keys[e.key] = true);
 window.addEventListener('keyup', (e) => keys[e.key] = false);
 
-// Controles Táctiles para Celular
+// Controles Táctiles
 const btnLeft = document.getElementById('btn-left');
 const btnRight = document.getElementById('btn-right');
 const btnAction = document.getElementById('btn-action');
@@ -64,7 +72,38 @@ function activateShield() {
     }
 }
 
-// Generación de Obstáculos
+// Iniciar Juego con el Botón JUGAR AHORA
+startBtn.addEventListener('click', startGame);
+restartBtn.addEventListener('click', () => {
+    gameOverScreen.classList.add('hidden');
+    startScreen.classList.remove('hidden');
+    renderLeaderboard();
+});
+
+function startGame() {
+    playerName = playerNameInput.value.trim() || "Piloto";
+    currentPlayerNameEl.textContent = playerName;
+
+    const diff = document.querySelector('input[name="difficulty"]:checked').value;
+    if (diff === 'easy') { difficultySpeed = 2.5; spawnRate = 45; }
+    else if (diff === 'normal') { difficultySpeed = 4; spawnRate = 30; }
+    else if (diff === 'hard') { difficultySpeed = 5.5; spawnRate = 20; }
+
+    score = 0;
+    obstacles = [];
+    stars = [];
+    isGameOver = false;
+    player.hasShield = false;
+    player.x = canvas.width / 2 - 20;
+
+    scoreEl.textContent = score;
+    shieldEl.textContent = "Inactivo";
+    shieldEl.style.color = "#ffffff";
+
+    startScreen.classList.add('hidden');
+    gameLoop();
+}
+
 function spawnObstacle() {
     const size = Math.random() * 20 + 20;
     obstacles.push({
@@ -72,33 +111,62 @@ function spawnObstacle() {
         y: -size,
         width: size,
         height: size,
-        speed: Math.random() * 3 + 2
+        speed: (Math.random() * 2 + difficultySpeed),
+        angle: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.1
     });
 }
 
-// Actualización de Lógica
+function spawnStar() {
+    stars.push({
+        x: Math.random() * (canvas.width - 25),
+        y: -25,
+        size: 22,
+        speed: difficultySpeed * 0.8
+    });
+}
+
 function update() {
     if (isGameOver) return;
 
-    // Movimiento
     if (keys['ArrowLeft'] || keys['a']) player.x -= player.speed;
     if (keys['ArrowRight'] || keys['d']) player.x += player.speed;
     player.x += player.dx;
 
-    // Colisión con los bordes de la pantalla
     if (player.x < 0) player.x = 0;
     if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
 
-    // Generar obstáculos
     frameCount++;
-    if (frameCount % 45 === 0) spawnObstacle();
+    if (frameCount % spawnRate === 0) spawnObstacle();
+    if (frameCount % 110 === 0) spawnStar();
 
-    // Movimiento y Colisiones de Obstáculos
+    // Estrellas
+    for (let i = 0; i < stars.length; i++) {
+        let star = stars[i];
+        star.y += star.speed;
+
+        if (
+            player.x < star.x + star.size &&
+            player.x + player.width > star.x &&
+            player.y < star.y + star.size &&
+            player.y + player.height > star.y
+        ) {
+            score += 5;
+            scoreEl.textContent = score;
+            stars.splice(i, 1);
+            i--;
+            continue;
+        }
+
+        if (star.y > canvas.height) { stars.splice(i, 1); i--; }
+    }
+
+    // Asteroides (Obstáculos)
     for (let i = 0; i < obstacles.length; i++) {
         let obs = obstacles[i];
         obs.y += obs.speed;
+        obs.angle += obs.rotSpeed;
 
-        // Detección de Colisión
         if (
             player.x < obs.x + obs.width &&
             player.x + player.width > obs.x &&
@@ -117,7 +185,6 @@ function update() {
             }
         }
 
-        // Incrementar Puntos
         if (obs.y > canvas.height) {
             score += 1;
             scoreEl.textContent = score;
@@ -127,57 +194,104 @@ function update() {
     }
 }
 
-// Renderizado Gráfico
+// Dibujar la Nave Espacial
+function drawPlayer() {
+    const px = player.x + player.width / 2;
+    const py = player.y;
+
+    // Escudo protector
+    if (player.hasShield) {
+        ctx.strokeStyle = '#38bdf8';
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(px, py + 20, 28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    // Fuego del propulsor
+    if (!isGameOver) {
+        ctx.fillStyle = Math.random() > 0.5 ? '#f97316' : '#ef4444';
+        ctx.beginPath();
+        ctx.moveTo(px - 6, py + 38);
+        ctx.lineTo(px + 6, py + 38);
+        ctx.lineTo(px, py + 48 + Math.random() * 6);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // Cuerpo de la Nave
+    ctx.fillStyle = '#a855f7';
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px + 20, py + 38);
+    ctx.lineTo(px - 20, py + 38);
+    ctx.closePath();
+    ctx.fill();
+
+    // Cabina
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.arc(px, py + 18, 6, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// Dibujar Estrellas
+function drawStar(star) {
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.arc(star.x + star.size/2, star.y + star.size/2, star.size/2, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// Dibujar Asteroides
+function drawObstacle(obs) {
+    ctx.save();
+    ctx.translate(obs.x + obs.width / 2, obs.y + obs.height / 2);
+    ctx.rotate(obs.angle);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(-obs.width / 2, -obs.height / 2, obs.width, obs.height);
+    ctx.restore();
+}
+
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Dibujar Jugador
-    ctx.fillStyle = player.hasShield ? '#38bdf8' : '#a855f7';
-    ctx.beginPath();
-    ctx.roundRect(player.x, player.y, player.width, player.height, 8);
-    ctx.fill();
-
-    // Dibujar Escudo
-    if (player.hasShield) {
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(player.x - 4, player.y - 4, player.width + 8, player.height + 8);
+    if (!isGameOver) {
+        drawPlayer();
+        stars.forEach(drawStar);
+        obstacles.forEach(drawObstacle);
     }
-
-    // Dibujar Obstáculos
-    ctx.fillStyle = '#ef4444';
-    obstacles.forEach(obs => {
-        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-    });
 }
 
-// Bucle Principal
 function gameLoop() {
     update();
     draw();
     if (!isGameOver) requestAnimationFrame(gameLoop);
 }
 
-// Finalizar Juego
 function endGame() {
     isGameOver = true;
     finalScoreEl.textContent = score;
+    saveScore(playerName, score);
     gameOverScreen.classList.remove('hidden');
 }
 
-// Reiniciar Juego
-restartBtn.addEventListener('click', () => {
-    score = 0;
-    obstacles = [];
-    isGameOver = false;
-    player.hasShield = false;
-    player.x = canvas.width / 2 - 20;
-    scoreEl.textContent = score;
-    shieldEl.textContent = "Inactivo";
-    shieldEl.style.color = "#ffffff";
-    gameOverScreen.classList.add('hidden');
-    gameLoop();
-});
+// Sistema de Mejores Puntajes
+function saveScore(name, points) {
+    let scores = JSON.parse(localStorage.getItem('cosmicScores')) || [];
+    scores.push({ name, points });
+    scores.sort((a, b) => b.points - a.points);
+    scores = scores.slice(0, 5);
+    localStorage.setItem('cosmicScores', JSON.stringify(scores));
+}
 
-// Iniciar Juego
-gameLoop();
+function renderLeaderboard() {
+    let scores = JSON.parse(localStorage.getItem('cosmicScores')) || [];
+    leaderboardList.innerHTML = scores.length === 0 
+        ? "<li>Aún no hay puntuaciones registradas</li>"
+        : scores.map(s => `<li><strong>${s.name}</strong>: ${s.points} pts</li>`).join('');
+}
+
+renderLeaderboard();
