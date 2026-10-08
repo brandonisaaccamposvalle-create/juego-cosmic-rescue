@@ -18,6 +18,7 @@ let score = 0;
 let isGameOver = true;
 let obstacles = [];
 let stars = [];
+let bullets = [];
 let frameCount = 0;
 let playerName = "Piloto";
 let difficultySpeed = 3;
@@ -34,7 +35,7 @@ const player = {
     x: canvas.width / 2 - 20,
     y: canvas.height - 70,
     width: 40,
-    height: 40,
+    height: 45,
     speed: 6,
     dx: 0,
     hasShield: false
@@ -42,13 +43,17 @@ const player = {
 
 // Controles Teclado
 const keys = {};
-window.addEventListener('keydown', (e) => keys[e.key] = true);
+window.addEventListener('keydown', (e) => {
+    keys[e.key] = true;
+    if (e.key === ' ' || e.key === 'f' || e.key === 'F') shoot();
+});
 window.addEventListener('keyup', (e) => keys[e.key] = false);
 
-// Controles Táctiles
+// Controles Táctiles y Botones
 const btnLeft = document.getElementById('btn-left');
 const btnRight = document.getElementById('btn-right');
 const btnAction = document.getElementById('btn-action');
+const btnShoot = document.getElementById('btn-shoot');
 
 btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); player.dx = -player.speed; });
 btnLeft.addEventListener('touchend', () => player.dx = 0);
@@ -61,6 +66,18 @@ btnRight.addEventListener('mousedown', () => player.dx = player.speed);
 btnRight.addEventListener('mouseup', () => player.dx = 0);
 
 btnAction.addEventListener('click', activateShield);
+btnShoot.addEventListener('click', shoot);
+
+function shoot() {
+    if (isGameOver) return;
+    bullets.push({
+        x: player.x + player.width / 2 - 2,
+        y: player.y,
+        width: 4,
+        height: 12,
+        speed: 10
+    });
+}
 
 function activateShield() {
     if (!player.hasShield && score >= 10) {
@@ -72,7 +89,7 @@ function activateShield() {
     }
 }
 
-// Iniciar Juego con el Botón JUGAR AHORA
+// Iniciar Juego
 startBtn.addEventListener('click', startGame);
 restartBtn.addEventListener('click', () => {
     gameOverScreen.classList.add('hidden');
@@ -92,6 +109,7 @@ function startGame() {
     score = 0;
     obstacles = [];
     stars = [];
+    bullets = [];
     isGameOver = false;
     player.hasShield = false;
     player.x = canvas.width / 2 - 20;
@@ -104,16 +122,25 @@ function startGame() {
     gameLoop();
 }
 
+// Crear Meteorito con forma irregular de roca
 function spawnObstacle() {
-    const size = Math.random() * 20 + 20;
+    const radius = Math.random() * 15 + 15;
+    const points = [];
+    const numPoints = 8;
+    for (let i = 0; i < numPoints; i++) {
+        const angle = (i / numPoints) * Math.PI * 2;
+        const dist = radius * (0.7 + Math.random() * 0.5);
+        points.push({ x: Math.cos(angle) * dist, y: Math.sin(angle) * dist });
+    }
+
     obstacles.push({
-        x: Math.random() * (canvas.width - size),
-        y: -size,
-        width: size,
-        height: size,
+        x: Math.random() * (canvas.width - radius * 2) + radius,
+        y: -radius,
+        radius: radius,
+        points: points,
         speed: (Math.random() * 2 + difficultySpeed),
         angle: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 0.1
+        rotSpeed: (Math.random() - 0.5) * 0.05
     });
 }
 
@@ -121,7 +148,7 @@ function spawnStar() {
     stars.push({
         x: Math.random() * (canvas.width - 25),
         y: -25,
-        size: 22,
+        size: 20,
         speed: difficultySpeed * 0.8
     });
 }
@@ -139,6 +166,32 @@ function update() {
     frameCount++;
     if (frameCount % spawnRate === 0) spawnObstacle();
     if (frameCount % 110 === 0) spawnStar();
+
+    // Mover y actualizar disparos
+    for (let i = 0; i < bullets.length; i++) {
+        let b = bullets[i];
+        b.y -= b.speed;
+
+        if (b.y < -10) {
+            bullets.splice(i, 1);
+            i--;
+            continue;
+        }
+
+        // Colisión de disparo con meteorito
+        for (let j = 0; j < obstacles.length; j++) {
+            let obs = obstacles[j];
+            let dist = Math.hypot(b.x - obs.x, b.y - obs.y);
+            if (dist < obs.radius) {
+                score += 2;
+                scoreEl.textContent = score;
+                obstacles.splice(j, 1);
+                bullets.splice(i, 1);
+                i--;
+                break;
+            }
+        }
+    }
 
     // Estrellas
     for (let i = 0; i < stars.length; i++) {
@@ -161,18 +214,15 @@ function update() {
         if (star.y > canvas.height) { stars.splice(i, 1); i--; }
     }
 
-    // Asteroides (Obstáculos)
+    // Meteoritos
     for (let i = 0; i < obstacles.length; i++) {
         let obs = obstacles[i];
         obs.y += obs.speed;
         obs.angle += obs.rotSpeed;
 
-        if (
-            player.x < obs.x + obs.width &&
-            player.x + player.width > obs.x &&
-            player.y < obs.y + obs.height &&
-            player.y + player.height > obs.y
-        ) {
+        // Colisión meteorito con jugador
+        let dist = Math.hypot((player.x + player.width / 2) - obs.x, (player.y + player.height / 2) - obs.y);
+        if (dist < obs.radius + player.width / 3) {
             if (player.hasShield) {
                 player.hasShield = false;
                 shieldEl.textContent = "Inactivo";
@@ -185,7 +235,7 @@ function update() {
             }
         }
 
-        if (obs.y > canvas.height) {
+        if (obs.y - obs.radius > canvas.height) {
             score += 1;
             scoreEl.textContent = score;
             obstacles.splice(i, 1);
@@ -194,7 +244,7 @@ function update() {
     }
 }
 
-// Dibujar la Nave Espacial
+// Dibujar la Nave Espacial detallada
 function drawPlayer() {
     const px = player.x + player.width / 2;
     const py = player.y;
@@ -202,10 +252,10 @@ function drawPlayer() {
     // Escudo protector
     if (player.hasShield) {
         ctx.strokeStyle = '#38bdf8';
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(px, py + 20, 28, 0, Math.PI * 2);
+        ctx.arc(px, py + 22, 32, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
     }
@@ -216,24 +266,33 @@ function drawPlayer() {
         ctx.beginPath();
         ctx.moveTo(px - 6, py + 38);
         ctx.lineTo(px + 6, py + 38);
-        ctx.lineTo(px, py + 48 + Math.random() * 6);
+        ctx.lineTo(px, py + 48 + Math.random() * 8);
         ctx.closePath();
         ctx.fill();
     }
 
-    // Cuerpo de la Nave
-    ctx.fillStyle = '#a855f7';
+    // Alas de la nave
+    ctx.fillStyle = '#6d28d9';
     ctx.beginPath();
-    ctx.moveTo(px, py);
-    ctx.lineTo(px + 20, py + 38);
-    ctx.lineTo(px - 20, py + 38);
+    ctx.moveTo(px, py + 10);
+    ctx.lineTo(px + 22, py + 42);
+    ctx.lineTo(px - 22, py + 42);
     ctx.closePath();
     ctx.fill();
 
-    // Cabina
+    // Cuerpo principal
+    ctx.fillStyle = '#a855f7';
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px + 12, py + 38);
+    ctx.lineTo(px - 12, py + 38);
+    ctx.closePath();
+    ctx.fill();
+
+    // Cabina de vidrio brillante
     ctx.fillStyle = '#38bdf8';
     ctx.beginPath();
-    ctx.arc(px, py + 18, 6, 0, Math.PI * 2);
+    ctx.ellipse(px, py + 18, 5, 10, 0, 0, Math.PI * 2);
     ctx.fill();
 }
 
@@ -245,20 +304,49 @@ function drawStar(star) {
     ctx.fill();
 }
 
-// Dibujar Asteroides
+// Dibujar Meteoritos Rocosos Irregulares
 function drawObstacle(obs) {
     ctx.save();
-    ctx.translate(obs.x + obs.width / 2, obs.y + obs.height / 2);
+    ctx.translate(obs.x, obs.y);
     ctx.rotate(obs.angle);
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(-obs.width / 2, -obs.height / 2, obs.width, obs.height);
+
+    ctx.fillStyle = '#64748b';
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(obs.points[0].x, obs.points[0].y);
+    for (let i = 1; i < obs.points.length; i++) {
+        ctx.lineTo(obs.points[i].x, obs.points[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Cráteres en la superficie
+    ctx.fillStyle = '#475569';
+    ctx.beginPath();
+    ctx.arc(-obs.radius * 0.3, -obs.radius * 0.2, obs.radius * 0.2, 0, Math.PI * 2);
+    ctx.arc(obs.radius * 0.2, obs.radius * 0.3, obs.radius * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.restore();
+}
+
+// Dibujar Láseres
+function drawBullet(b) {
+    ctx.fillStyle = '#ef4444';
+    ctx.shadowColor = '#ef4444';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(b.x, b.y, b.width, b.height);
+    ctx.shadowBlur = 0;
 }
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (!isGameOver) {
+        bullets.forEach(drawBullet);
         drawPlayer();
         stars.forEach(drawStar);
         obstacles.forEach(drawObstacle);
@@ -278,7 +366,7 @@ function endGame() {
     gameOverScreen.classList.remove('hidden');
 }
 
-// Sistema de Mejores Puntajes
+// Guardar y cargar puntajes
 function saveScore(name, points) {
     let scores = JSON.parse(localStorage.getItem('cosmicScores')) || [];
     scores.push({ name, points });

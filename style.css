@@ -155,15 +155,15 @@ body {
 
 #mobile-controls {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     padding: 10px;
     background: rgba(15, 23, 42, 0.9);
 }
 
 #mobile-controls button {
     flex: 1;
-    padding: 14px 0;
-    font-size: 0.9rem;
+    padding: 12px 0;
+    font-size: 0.8rem;
     font-weight: bold;
     border: none;
     border-radius: 8px;
@@ -173,6 +173,10 @@ body {
     touch-action: manipulation;
 }
 
+#mobile-controls #btn-shoot {
+    background: #ef4444;
+}
+
 #mobile-controls button:active {
-    background: #0369a1;
+    filter: brightness(0.85);
 }

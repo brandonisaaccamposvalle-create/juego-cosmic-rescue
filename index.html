@@ -8,7 +8,7 @@
 </head>
 <body>
     <div id="game-container">
-        <!-- Pantalla de Inicio (Requerida antes de Jugar) -->
+        <!-- Pantalla de Inicio -->
         <div id="start-screen" class="overlay">
             <h1>🚀 COSMIC RESCUE</h1>
             <p>Ingresa tu nombre y selecciona la dificultad para iniciar:</p>
@@ -21,10 +21,8 @@
                 <label><input type="radio" name="difficulty" value="hard"> Difícil</label>
             </div>
 
-            <!-- Botón Obligatorio para Empezar -->
             <button id="start-btn">🚀 ¡JUGAR AHORA!</button>
 
-            <!-- Tabla de Puntajes -->
             <div class="leaderboard-container">
                 <h3>🏆 Mejores Puntajes</h3>
                 <ol id="leaderboard-list"></ol>
@@ -44,6 +42,7 @@
         <!-- Botones para Celular / Táctil -->
         <div id="mobile-controls">
             <button id="btn-left">◀ Izq</button>
+            <button id="btn-shoot">🔫 Disparar</button>
             <button id="btn-action">🛡️ Escudo (10pts)</button>
             <button id="btn-right">Der ▶</button>
         </div>
