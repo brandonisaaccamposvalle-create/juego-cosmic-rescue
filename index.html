@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Cosmic Rescue - Juego 2D</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Marcador superior -->
+        <div id="hud">
+            <div>Puntos: <span id="score">0</span></div>
+            <div>Escudo: <span id="shield-status">Inactivo</span></div>
+        </div>
+
+        <!-- Pantalla del juego -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Controles para Celular -->
+        <div id="mobile-controls">
+            <button id="btn-left">◀ Izq</button>
+            <button id="btn-action">🛡️ Escudo</button>
+            <button id="btn-right">Der ▶</button>
+        </div>
+
+        <!-- Pantalla de Game Over -->
+        <div id="game-over-screen" class="hidden">
+            <h1>¡Game Over!</h1>
+            <p>Puntaje final: <span id="final-score">0</span></p>
+            <button id="restart-btn">Jugar de nuevo</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
